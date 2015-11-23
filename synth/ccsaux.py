@@ -1,11 +1,14 @@
 # this function probably has a better replacement
-from numpy import argsort, array, append, real, sort, copy, linspace, repeat, fft, real
+from numpy import argsort, array, append, real, sort, copy, linspace, repeat, fft, real, ndarray
 from scipy.io import wavfile
 from time import time
 
+import numpy
+# numpy.set_printoptions(threshold=numpy.nan)
+
 def flatten(list_of_lists):
     ret = array(list_of_lists[0], dtype = list_of_lists[0].dtype)
-    print ret.shape
+    print(ret.shape)
     for l in list_of_lists[1:]:
         ret = append(ret, l, axis=0)
     return ret
@@ -17,21 +20,32 @@ def complex_median(freqs, j):
     # build a representative entry by finding the median of the complex
     # and imaginary parts in parallel
     sources = len(freqs)
-    
+
     left_real = sort([freq[j][0].real for freq in freqs])[sources/2]
     left_imag = sort([freq[j][0].imag for freq in freqs])[sources/2]
     right_real = sort([freq[j][1].real for freq in freqs])[sources/2]
     right_imag = sort([freq[j][1].imag for freq in freqs])[sources/2]
-    
+
     return array([left_real + left_imag*1j, right_real + right_imag*1j])
 
 def median_by_intensity(freqs, j):
     # Choose the representative entry by finding the median intensity
     # of all of the *left-channel* frequencies.
-    lvals = [abs(freq[j][0]) for freq in freqs]
-    #rvals = [abs(freq[j][1]) for freq in freqs]
-    # pick the one with the median magnitude
-    return freqs[argsort(lvals)[len(freqs) / 2]][j]
+    lvals = []
+    for freq in freqs:
+        if j >= len(freq):
+            fj = freq[-1]
+        else:
+            fj = freq[j]
+        if isinstance(fj, ndarray):
+            lvals.append(abs(fj[0]))
+
+    # pick the frequency with median magnitude
+    med = freqs[argsort(lvals)[len(freqs) / 2]]
+    if not isinstance(med[j], ndarray):
+        return ndarray(abs(med[j]))
+    else:
+        return med[j]
 
 def feather(list_of_lists):
     lfb = 256
@@ -56,14 +70,18 @@ def feather(list_of_lists):
     return flatten(list_of_lists)
 
 def simple_noise_filter(target, files, method=median_by_intensity, combination=flatten, section_length=4096):
-    # load all .mp3 files into an arrays 
+    # load all .mp3 files into an arrays
     # bin each to a certain length
     #print time()
     feeds = [section_by_length(wavfile.read(file)[1], section_length) for file in files]
     samplerate = wavfile.read(files[0])[0]
     #print time()
-    # perform fft on each bin, select median of each 
+    # perform fft on each bin, select median of each
     max_len = len(max(feeds, key=len))
+    # append silence to shorter feeds so all feeds have the same length
+    for feed in feeds:
+        if len(feed) < max_len:
+            feed += [[0] * section_length] * (max_len - len(feed))
     sections = []
     for i in range(max_len):
         begin = time()
