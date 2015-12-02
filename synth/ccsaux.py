@@ -34,18 +34,13 @@ def median_by_intensity(freqs, j):
     lvals = []
     for freq in freqs:
         if j >= len(freq):
-            fj = freq[-1]
+            lvals.append(abs(freq[j][0]))
         else:
-            fj = freq[j]
-        if isinstance(fj, ndarray):
-            lvals.append(abs(fj[0]))
+            lvals.append(0)
 
     # pick the frequency with median magnitude
     med = freqs[argsort(lvals)[len(freqs) / 2]]
-    if not isinstance(med[j], ndarray):
-        return ndarray(abs(med[j]))
-    else:
-        return med[j]
+    return med[j]
 
 def feather(list_of_lists):
     lfb = 256
@@ -79,9 +74,6 @@ def simple_noise_filter(target, files, method=median_by_intensity, combination=f
     # perform fft on each bin, select median of each
     max_len = len(max(feeds, key=len))
     # append silence to shorter feeds so all feeds have the same length
-    for feed in feeds:
-        if len(feed) < max_len:
-            feed += [[0] * section_length] * (max_len - len(feed))
     sections = []
     for i in range(max_len):
         begin = time()
