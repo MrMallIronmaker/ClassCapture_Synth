@@ -1,5 +1,5 @@
 # this function probably has a better replacement
-from numpy import argsort, array, append, real, sort, copy, linspace, repeat, fft, real, ndarray
+from numpy import argsort, array, append, real, sort, copy, linspace, repeat, fft, real, ndarray, linalg
 from scipy.io import wavfile
 from time import time
 
@@ -69,11 +69,14 @@ def simple_noise_filter(target, files, method=median_by_intensity, combination=f
     # bin each to a certain length
     #print time()
     feeds = [section_by_length(wavfile.read(file)[1], section_length) for file in files]
+    # normalize feeds
+    for feed in feeds:
+        feed = [x / linalg.norm(x) for x in feed]
+
     samplerate = wavfile.read(files[0])[0]
     #print time()
     # perform fft on each bin, select median of each
     max_len = len(max(feeds, key=len))
-    # append silence to shorter feeds so all feeds have the same length
     sections = []
     for i in range(max_len):
         begin = time()
