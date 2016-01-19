@@ -1,10 +1,7 @@
-# this function probably has a better replacement
 from numpy import argsort, array, append, real, sort, copy, linspace, repeat, fft, real, ndarray, linalg
 from scipy.io import wavfile
 from time import time
 
-import numpy
-# numpy.set_printoptions(threshold=numpy.nan)
 
 def flatten(list_of_lists):
     ret = array(list_of_lists[0], dtype = list_of_lists[0].dtype)
@@ -13,8 +10,10 @@ def flatten(list_of_lists):
         ret = append(ret, l, axis=0)
     return ret
 
+
 def section_by_length(feed, target_length):
     return [feed[i:i+target_length] for i in range(0,len(feed),target_length)]
+
 
 def complex_median(freqs, j):
     # build a representative entry by finding the median of the complex
@@ -27,6 +26,7 @@ def complex_median(freqs, j):
     right_imag = sort([freq[j][1].imag for freq in freqs])[sources/2]
 
     return array([left_real + left_imag*1j, right_real + right_imag*1j])
+
 
 def median_by_intensity(freqs, j):
     # Choose the representative entry by finding the median intensity
@@ -42,6 +42,7 @@ def median_by_intensity(freqs, j):
     med = freqs[argsort(lvals)[len(freqs) / 2]]
     return med[j]
 
+
 def feather(list_of_lists):
     lfb = 256
     backup = [copy(i) for i in list_of_lists]
@@ -51,6 +52,7 @@ def feather(list_of_lists):
     feather_A_duet = linspace(0.5, 0, lfb).reshape(lfb, 1)
     feather_B_main = linspace(1, 0.5, lfb).reshape(lfb, 1)
     feather_B_duet = linspace(0, 0.5, lfb).reshape(lfb, 1)
+
     for i in range(1, sections - 1):
         # [---B]
         #     ^
@@ -64,6 +66,7 @@ def feather(list_of_lists):
 
     return flatten(list_of_lists)
 
+
 def simple_noise_filter(target, files, method=median_by_intensity, combination=flatten, section_length=4096):
     # load all .mp3 files into an arrays
     # bin each to a certain length
@@ -74,26 +77,17 @@ def simple_noise_filter(target, files, method=median_by_intensity, combination=f
         feed = [x / linalg.norm(x) for x in feed]
 
     samplerate = wavfile.read(files[0])[0]
-    #print time()
+
     # perform fft on each bin, select median of each
     max_len = len(max(feeds, key=len))
     sections = []
     for i in range(max_len):
         begin = time()
         freqs = [fft.fft(feed[i], axis=0) for feed in feeds]
-        #print "Fourier per ~.1s feed: ",
-        #print (time()-begin)/3.
         begin = time()
-        #filtered_freqs = [median_by_intensity(freqs, j) for j in range(len(freqs[0]))] # traverse the arrays in parallel
         filtered_freqs = [method(freqs, j) for j in range(len(freqs[0]))]
-        #print "Filtering: ",
-        #print (time()-begin)
         begin = time()
         sections += [real(fft.ifft(filtered_freqs, axis=0)).astype(feeds[0][0].dtype)]
-        #print "Inversing per ~.1s feed: ",
-        #print (time() - begin)
-    # output
-    #print time()
+
     samples = combination(sections)
     wavfile.write(target, samplerate, samples)
-    #print time()
